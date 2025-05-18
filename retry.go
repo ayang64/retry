@@ -55,7 +55,7 @@ func (c Constant) Delay(n int) time.Duration {
 type Linear time.Duration
 
 func (l Linear) Delay(n int) time.Duration {
-	return time.Duration(l) * time.Duration(n)
+	return time.Duration(l) * time.Duration(n+1)
 }
 
 // Attempt returns an iterator over retry attempts using the provided Backoff
