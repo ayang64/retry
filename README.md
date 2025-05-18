@@ -29,6 +29,7 @@ type Backoff interface {
 - `Constant`: always returns the same delay
 - `Linear`: grows linearly with attempts (delay * attempt)
 - `Exponential`: doubles delay each time
+- `Decay`: decreases every iteration on a curve similar to exponential decay; user supplied half-life
 - `Jitter`: adds randomness to any strategy
 
 ### Retry Loop
