@@ -12,7 +12,7 @@ panic etc.
 
 - Transparent: nothing is hidden; you run the loop.
 - Composable: use any logic to decide when to stop.
-- Context-aware: iterator respects cancellation via supplied context and context can be closed over and used in inner loop.
+- Context-aware: iterator respects cancellation via supplied context and context can be used naturally in inner loop.
 - Testable: easy to verify retry schedules without sleeping.
 
 ## Core Concepts
@@ -51,9 +51,9 @@ for i, d := range retry.Attempt(ctx, backoff) {
         continue
     }
 
-    // at this point, we're within our retry conditions (number of iterations
-    // and delay) and // no error has occured so we can return our value, thus
-    // exiting the retry loop.
+    // at this point, we're within our retry conditions (number of iterations and
+    // delay) and no error has occured so we can return our value, thus exiting
+    // the retry loop.
     return someVal, nil
 }
 ```
@@ -83,7 +83,7 @@ for i, delay := range retry.Attempt(ctx, backoff) {
 
 ## No Opinionated Wrappers
 
-There’s no `Do()` function that wraps your retry logic — this package gives you
+There’s no `Do()` function that wraps your retry logic - this package gives you
 just the iterator. This is by design.
 
 You decide:
