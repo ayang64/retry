@@ -12,7 +12,7 @@ panic etc.
 
 - Transparent: nothing is hidden; you run the loop.
 - Composable: use any logic to decide when to stop.
-- Context-aware: iterator respects cancellation via supplied context and context can be used naturally in inner loop.
+- Context-aware: iterator respects cancellation via supplied context and context can be used naturally in the loop body.
 - Testable: easy to verify retry schedules without sleeping.
 
 ## Core Concepts
