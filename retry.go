@@ -48,14 +48,18 @@ func (l Linear) Delay(n int) time.Duration {
 //
 // Example:
 //
-//	for i, delay := range retry.Attempt(ctx, retry.Linear(100*time.Millisecond)) {
-//	    if err := doSomething(); err == nil {
-//	        break
-//	    }
-//	    if delay > 2*time.Second {
-//	        break // give up if delay exceeds threshold
-//	    }
-//	}
+//		for i, delay := range retry.Attempt(ctx, retry.Linear(100*time.Millisecond)) {
+//		    if err := doSomething(); err != nil {
+//	        log.Printf("failed to doSomething() %v", err)
+//		       if delay > 2*time.Second {
+//		          break // give up if delay exceeds threshold
+//		       }
+//	        continue
+//		    }
+//
+//	     // at this point, everything succeeded so simply return or break
+//	     return
+//		}
 func Attempt(ctx context.Context, b Backoff) iter.Seq2[int, time.Duration] {
 	return func(yield func(int, time.Duration) bool) {
 		for i := 0; ; i++ {
