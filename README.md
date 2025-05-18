@@ -10,9 +10,9 @@ panic etc.
 
 ## Why?
 
-- Transparent: nothing is hidden — you run the loop.
+- Transparent: nothing is hidden; you run the loop.
 - Composable: use any logic to decide when to stop.
-- Context-aware: cancellation is built in.
+- Context-aware: iterator respects cancellation via supplied context and context can be closed over and used in inner loop.
 - Testable: easy to verify retry schedules without sleeping.
 
 ## Core Concepts
@@ -36,17 +36,18 @@ Use `retry.Attempt` to generate `(attempt, delay)` values:
 
 ```go
 for i, d := range retry.Attempt(ctx, backoff) {
-    // stop retries if we've exceeded 5 iterations or 2 seconds of delay
-    if i >= 5 || d > 2*time.Second {
-        log.Println("giving up")
-        break
-    }
 
     err, someVal := doSomething()
 
     // on error, we can simply continue and most likely log the error
     if err != nil {
         log.Printf("failed on attempt %d with %v", i, err)
+        // stop retries if we've exceeded 5 iterations or next iteration would
+        // take more than 2 seconds.
+        if i >= 5 || d > 2*time.Second {
+            log.Println("giving up")
+            break
+        }
         continue
     }
 
@@ -67,13 +68,12 @@ backoff := &retry.Jitter{
 }
 
 for i, delay := range retry.Attempt(ctx, backoff) {
-    // stop retries if we've exceeded 2 seconds of delay
-    if delay > 2*time.Second {
-        break
-    }
-
     // on error, we can simply continue and most likely log the error
     if err := makeRequest(); err != nil {
+        // stop retries if next iteration delay exceeds 2 seconds
+        if delay > 2*time.Second {
+            break
+        }
         continue
     }
 
