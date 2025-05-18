@@ -36,15 +36,24 @@ Use `retry.Attempt` to generate `(attempt, delay)` values:
 
 ```go
 for i, d := range retry.Attempt(ctx, backoff) {
-    err := doSomething()
-    if err == nil {
-        break
-    }
+    // stop retries if we've exceeded 5 iterations or 2 seconds of delay
     if i >= 5 || d > 2*time.Second {
         log.Println("giving up")
         break
     }
-    log.Printf("retry %d failed, waiting %s", i, d)
+
+    err, someVal := doSomething()
+
+    // on error, we can simply continue and most likely log the error
+    if err != nil {
+        log.Printf("failed on attempt %d with %v", i, err)
+        continue
+    }
+
+    // at this point, we're within our retry conditions (number of iterations
+    // and delay) and // no error has occured so we can return our value, thus
+    // exiting the retry loop.
+    return someVal, nil
 }
 ```
 
@@ -54,21 +63,21 @@ ctx := context.Background()
 
 backoff := &retry.Jitter{
     J: 100 * time.Millisecond,
-    B: retry.Exponential{
-        Base: 100 * time.Millisecond,
-        Max:  5 * time.Second,
-    },
+    B: retry.Exponential(time.Second * 1),
 }
 
 for i, delay := range retry.Attempt(ctx, backoff) {
-    err := makeRequest()
-    if err == nil {
+    // stop retries if we've exceeded 2 seconds of delay
+    if delay > 2*time.Second {
         break
     }
-    if delay > 2*time.Second {
-        break // stop on excessive delay
+
+    // on error, we can simply continue and most likely log the error
+    if err := makeRequest(); err != nil {
+        continue
     }
-    time.Sleep(delay)
+
+    return
 }
 ```
 
