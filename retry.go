@@ -11,27 +11,36 @@ type Backoff interface {
 	Delay(int) time.Duration
 }
 
+// Jitter is a backoff strategy the augments other staegies by adding random
+// jitter to the Delay() result.
+//
+// The formula for jitter applied is ±(j/2) where j is a random number between
+// 0 and J.
 type Jitter struct {
-	J time.Duration
-	B Backoff
-}
-
-type Exponential time.Duration
-
-func (e Exponential) Delay(n int) time.Duration {
-	return time.Duration(e) * 1 << n
+	J time.Duration // Amount of jitter to apply.
+	B Backoff       // Backoff strategy to apply jitter to.
 }
 
 func (j *Jitter) Delay(n int) time.Duration {
 	return j.B.Delay(n) + time.Duration(rand.Int63n(int64(j.J))) - j.J/2
 }
 
+// Exponential encodes the amount to back off exponentially.  Its value is
+// doubled every iteration.
+type Exponential time.Duration
+
+func (e Exponential) Delay(n int) time.Duration {
+	return time.Duration(e) * 1 << n
+}
+
+// Constant applies a single constant delay to every iteration.
 type Constant time.Duration
 
 func (c Constant) Delay(n int) time.Duration {
 	return time.Duration(c)
 }
 
+// Linear increases the delay by a fixed amount every iteration.
 type Linear time.Duration
 
 func (l Linear) Delay(n int) time.Duration {
@@ -48,18 +57,14 @@ func (l Linear) Delay(n int) time.Duration {
 //
 // Example:
 //
-//		for i, delay := range retry.Attempt(ctx, retry.Linear(100*time.Millisecond)) {
-//		    if err := doSomething(); err != nil {
-//	        log.Printf("failed to doSomething() %v", err)
-//		       if delay > 2*time.Second {
-//		          break // give up if delay exceeds threshold
-//		       }
-//	        continue
-//		    }
-//
-//	     // at this point, everything succeeded so simply return or break
-//	     return
-//		}
+//	for i, delay := range retry.Attempt(ctx, retry.Linear(100*time.Millisecond)) {
+//	    if err := doSomething(); err == nil {
+//	        break
+//	    }
+//	    if delay > 2*time.Second {
+//	        break // give up if delay exceeds threshold
+//	    }
+//	}
 func Attempt(ctx context.Context, b Backoff) iter.Seq2[int, time.Duration] {
 	return func(yield func(int, time.Duration) bool) {
 		for i := 0; ; i++ {
