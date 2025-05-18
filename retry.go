@@ -79,9 +79,6 @@ func (l Linear) Delay(n int) time.Duration {
 func Attempt(ctx context.Context, b Backoff) iter.Seq2[int, time.Duration] {
 	return func(yield func(int, time.Duration) bool) {
 		for i := 0; ; i++ {
-			if ctx.Err() != nil {
-				return
-			}
 			d := b.Delay(i)
 			if !yield(i, d) {
 				return
