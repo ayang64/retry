@@ -28,7 +28,7 @@ type Backoff interface {
 ### Built-in Strategies
 - `Constant`: always returns the same delay
 - `Linear`: grows linearly with attempts (delay * attempt)
-- `Exponential`: doubles delay each time (with overflow safety)
+- `Exponential`: doubles delay each time
 - `Jitter`: adds randomness to any strategy
 
 ### Retry Loop
