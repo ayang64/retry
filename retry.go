@@ -11,6 +11,17 @@ type Backoff interface {
 	Delay(int) time.Duration
 }
 
+// Decay implements exponential decay.  I is the initial time and H is the
+// iteration that the half-life falls on.
+type Decay struct {
+	I time.Duration // initial decay
+	H int           // iteration at which the decay's half-life will be reached
+}
+
+func (d *Decay) Delay(n int) time.Duration {
+	return d.I >> (n / d.H)
+}
+
 // Jitter is a backoff strategy the augments other staegies by adding random
 // jitter to the Delay() result.
 //
@@ -73,6 +84,10 @@ func Attempt(ctx context.Context, b Backoff) iter.Seq2[int, time.Duration] {
 			}
 			d := b.Delay(i)
 			if !yield(i, d) {
+				return
+			}
+
+			if d == 0 {
 				return
 			}
 			select {

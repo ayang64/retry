@@ -7,6 +7,10 @@ import (
 )
 
 func TestAttempt(t *testing.T) {
+	for i, d := range Attempt(context.TODO(), &Decay{I: 500 * time.Millisecond, H: 7}) {
+		t.Logf("%d, %s: hello!", i, d)
+	}
+
 	for i, d := range Attempt(context.TODO(), Exponential(time.Second*3)) {
 		if d > time.Second*25 {
 			break
