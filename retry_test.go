@@ -1,6 +1,7 @@
 package retry
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -143,4 +144,51 @@ func TestDecay(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAttempt(t *testing.T) {
+	t.Run("constant time, 10 iterations", func(t *testing.T) {
+		backoff := Constant(10 * time.Microsecond)
+		var interval []time.Duration
+		for i, d := range Attempt(t.Context(), backoff) {
+			interval = append(interval, d)
+			if i == 9 {
+				break
+			}
+		}
+		if got, expected := len(interval), 10; got != expected {
+			t.Fatalf("got %d results; expected %d", got, expected)
+		}
+	})
+
+	// a 0 delay causes loop to only execute once
+	t.Run("0 delay", func(t *testing.T) {
+		backoff := Constant(0)
+		var interval []time.Duration
+		for i, d := range Attempt(t.Context(), backoff) {
+			interval = append(interval, d)
+			if i == 9 {
+				break
+			}
+		}
+		if got, expected := len(interval), 1; got != expected {
+			t.Fatalf("got %d results; expected %d", got, expected)
+		}
+	})
+
+	t.Run("cancelled context", func(t *testing.T) {
+		backoff := Constant(2 * time.Second)
+		ctx, stop := context.WithTimeout(t.Context(), 2*time.Second)
+		defer stop()
+		var interval []time.Duration
+		for i, d := range Attempt(ctx, backoff) {
+			interval = append(interval, d)
+			if i == 9 {
+				break
+			}
+		}
+		if got, expected := len(interval), 2; got != expected {
+			t.Fatalf("got %d results; expected %d", got, expected)
+		}
+	})
 }
