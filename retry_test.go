@@ -1,39 +1,146 @@
 package retry
 
 import (
-	"context"
 	"testing"
 	"time"
 )
 
-func TestAttempt(t *testing.T) {
-	for i, d := range Attempt(context.TODO(), &Decay{I: 500 * time.Millisecond, H: 7}) {
-		t.Logf("%d, %s: hello!", i, d)
+func eq[T comparable](a, b []T) bool {
+	if len(a) != len(b) {
+		return false
 	}
-
-	for i, d := range Attempt(context.TODO(), Exponential(time.Second*3)) {
-		if d > time.Second*25 {
-			break
+	for i := range len(a) {
+		if a[i] != b[i] {
+			return false
 		}
-		t.Logf("%d, %s: hello!", i, d)
+	}
+	return true
+}
+
+func TestConstant(t *testing.T) {
+	tests := map[string]struct {
+		i        int
+		backoff  Constant
+		expected []time.Duration
+	}{
+		"0 delay": {
+			i:        5,
+			backoff:  Constant(0),
+			expected: []time.Duration{0, 0, 0, 0, 0},
+		},
+		"10 second": {
+			i:        5,
+			backoff:  Constant(10 * time.Second),
+			expected: []time.Duration{10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second, 10 * time.Second},
+		},
 	}
 
-	for i := range Attempt(context.TODO(), Constant(time.Second)) {
-		if i > 9 {
-			break
-		}
-		t.Logf("%d: hello!", i)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var got []time.Duration
+			for i := range test.i {
+				got = append(got, test.backoff.Delay(i))
+			}
+
+			if !eq(got, test.expected) {
+				t.Fatalf("got intervals %#v; expected %#v", got, test.expected)
+			}
+		})
+	}
+}
+
+func TestLinear(t *testing.T) {
+	tests := map[string]struct {
+		i        int
+		backoff  Linear
+		expected []time.Duration
+	}{
+		"0 delay": {
+			i:        5,
+			backoff:  Linear(0),
+			expected: []time.Duration{0, 0, 0, 0, 0},
+		},
+		"10 second": {
+			i:        5,
+			backoff:  Linear(10 * time.Second),
+			expected: []time.Duration{10 * time.Second, 20 * time.Second, 30 * time.Second, 40 * time.Second, 50 * time.Second},
+		},
 	}
 
-	j := Jitter{
-		J: time.Duration(500 * time.Millisecond),
-		B: Constant(1 * time.Second),
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var got []time.Duration
+			for i := range test.i {
+				got = append(got, test.backoff.Delay(i))
+			}
+
+			if !eq(got, test.expected) {
+				t.Fatalf("got intervals %#v; expected %#v", got, test.expected)
+			}
+		})
+	}
+}
+
+func TestExponential(t *testing.T) {
+	tests := map[string]struct {
+		i        int
+		backoff  Exponential
+		expected []time.Duration
+	}{
+		"0 delay": {
+			i:        5,
+			backoff:  Exponential(0),
+			expected: []time.Duration{0, 0, 0, 0, 0},
+		},
+		"10 second": {
+			i:        5,
+			backoff:  Exponential(10 * time.Second),
+			expected: []time.Duration{10 * time.Second, 20 * time.Second, 40 * time.Second, 80 * time.Second, 160 * time.Second},
+		},
 	}
 
-	for i, d := range Attempt(context.TODO(), &j) {
-		if i > 9 {
-			break
-		}
-		t.Logf("%d, %s: with jitter!", i, d)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var got []time.Duration
+			for i := range test.i {
+				got = append(got, test.backoff.Delay(i))
+			}
+
+			if !eq(got, test.expected) {
+				t.Fatalf("got intervals %#v; expected %#v", got, test.expected)
+			}
+		})
+	}
+}
+
+func TestDecay(t *testing.T) {
+	tests := map[string]struct {
+		i        int
+		backoff  Decay
+		expected []time.Duration
+	}{
+		"0 delay": {
+			i:        10,
+			backoff:  Decay{I: 0, H: 3},
+			expected: []time.Duration{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		"10 second": {
+			i:        10,
+			backoff:  Decay{I: time.Second * 10, H: 2},
+			expected: []time.Duration{10 * time.Second, 10 * time.Second, 5 * time.Second, 5 * time.Second, 2500 * time.Millisecond, 2500 * time.Millisecond, 1250 * time.Millisecond, 1250 * time.Millisecond, 625 * time.Millisecond, 625 * time.Millisecond},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			var got []time.Duration
+			for i := range test.i {
+				got = append(got, test.backoff.Delay(i))
+			}
+
+			if !eq(got, test.expected) {
+				t.Fatalf("got intervals %#v; expected %#v", got, test.expected)
+			}
+		})
 	}
 }
